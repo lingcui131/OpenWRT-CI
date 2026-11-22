@@ -65,3 +65,11 @@ CONFIG_PACKAGE_luci-proto-wireguard=y
 # 等仓库恢复或找到替代源后，在 PRIVATE.sh 加一行 UPDATE_PACKAGE 即可补回。
 # AdGuard Home 按 v4 决定仍不开。
 # ============================================================
+
+# ---------- 2026-11-22 整体优化追加 ----------
+# irqbalance：四核 CPU 中断均衡，主路由高负载时更稳（immortalwrt 标准包）
+CONFIG_PACKAGE_irqbalance=y
+# 关掉 GENERAL 默认的 samba4 文件共享：家里有群晖负责文件，路由器上不开共享，省内存少暴露面
+CONFIG_PACKAGE_luci-app-samba4=n
+# 关掉用不上的 OpenVPN 内核模块（GENERAL 默认开；用户不用 OpenVPN）
+CONFIG_PACKAGE_kmod-ovpn-backports=n
