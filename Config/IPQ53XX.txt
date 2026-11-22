@@ -1,9 +1,5 @@
 #设备平台
 CONFIG_TARGET_qualcommbe=y
 CONFIG_TARGET_qualcommbe_ipq53xx=y
-#设备列表
+#设备列表（精简：只编京东云赵云 RE-CS-06 一台，原版另有 re-cs-08/小米 BE3600 Pro p5/p8/小米 BE6500，已去掉省时）
 CONFIG_TARGET_DEVICE_qualcommbe_ipq53xx_DEVICE_jdcloud_re-cs-06=y
-CONFIG_TARGET_DEVICE_qualcommbe_ipq53xx_DEVICE_jdcloud_re-cs-08=y
-CONFIG_TARGET_DEVICE_qualcommbe_ipq53xx_DEVICE_xiaomi_be3600-pro-wired-p5=y
-CONFIG_TARGET_DEVICE_qualcommbe_ipq53xx_DEVICE_xiaomi_be3600-pro-wired-p8=y
-CONFIG_TARGET_DEVICE_qualcommbe_ipq53xx_DEVICE_xiaomi_be6500=y
