@@ -18,3 +18,29 @@ UPDATE_PACKAGE "luci-app-bandix" "timsaya/luci-app-bandix" "main"
 
 # Lucky 的 LuCI 界面（lucky 本体已在 immortalwrt 官方 packages 源里，只加界面）
 UPDATE_PACKAGE "luci-app-lucky" "gdy666/luci-app-lucky" "main"
+
+# ============================================================
+# 2026-11-23 BTF 修复（源码层兜底）：上一版成品内核无 BTF（/sys/kernel/btf 不存在、honk 崩溃循环），
+# .config 层已在 PRIVATE.txt 补全依赖链，这里再直接给内核配置片段钉一遍；
+# 同时关掉这台 eMMC 机型用不上的大块功能，给 BTF 腾 7168k 内核分区空间
+# （本地 Kwrt 版实测口径：io_uring/ftrace/NAND·NOR·UBI 合计约省 1.3MB，honk 与全部插件不依赖它们）
+# ============================================================
+KCFG=""
+for cand in target/linux/qualcommbe/config-6.18 openwrt/target/linux/qualcommbe/config-6.18; do
+  [ -f "$cand" ] && KCFG="$cand" && break
+done
+if [ -n "$KCFG" ]; then
+  {
+    echo 'CONFIG_DEBUG_INFO=y'
+    echo 'CONFIG_DEBUG_INFO_BTF=y'
+    echo '# CONFIG_DEBUG_INFO_REDUCED is not set'
+    echo '# CONFIG_IO_URING is not set'
+    echo '# CONFIG_FTRACE is not set'
+    echo '# CONFIG_MTD_NAND_CORE is not set'
+    echo '# CONFIG_MTD_SPI_NOR is not set'
+    echo '# CONFIG_MTD_UBI is not set'
+  } >> "$KCFG"
+  echo "BTF fix: patched kernel fragment $KCFG"
+else
+  echo "BTF fix: kernel fragment config-6.18 not found, skipped"
+fi
