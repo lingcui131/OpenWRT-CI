@@ -5,7 +5,12 @@
 # ============================================================
 
 # ---------- 内核：Honk 的硬前提 ----------
+# 2026-11-23 修复：BTF 依赖 KERNEL_DEBUG_INFO 且 REDUCED 必须关；上一版只写 BTF 一行、被 defconfig 静默丢弃，
+# 成品内核无 BTF（/sys/kernel/btf 不存在、honk 崩溃循环）。这次把依赖链写全，PRIVATE.sh 里另有源码层片段补丁兜底。
+CONFIG_KERNEL_DEBUG_INFO=y
+CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
 CONFIG_KERNEL_DEBUG_INFO_BTF=y
+CONFIG_KERNEL_DEBUG_INFO_BTF_MODULES=y
 CONFIG_KERNEL_XDP_SOCKETS=y
 CONFIG_BPF_TOOLCHAIN_HOST=y
 
