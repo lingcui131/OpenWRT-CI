@@ -68,3 +68,24 @@ if [ -d package ] && [ -d target ]; then
   printf '%s\n' "uci set luci.main.mediaurlbase='/luci-static/argon'" "uci commit luci" "exit 0" > files/etc/uci-defaults/99-luci-theme
   echo "theme: default set to argon via uci-defaults"
 fi
+
+# ============================================================
+# 2026-11-24 第五档：RE-CS-06 内核镜像压缩 gzip → lzma
+# 前四档砍配置实际只省 56KB（NAND 栈被 Kconfig 依赖拉回），还差 358,120 字节；
+# 源码 target/linux/qualcommbe/image/Makefile 现成有 Device/FitImageLzma 模板，
+# 把 jdcloud_re-cs-06 的镜像配方改过去，靠压缩率一次补满，不砍任何功能。
+# ============================================================
+IMG_MK=""
+for root in "$PWD" /mnt/build_wrt; do
+  if [ -f "$root/target/linux/qualcommbe/image/ipq53xx.mk" ]; then
+    IMG_MK="$root/target/linux/qualcommbe/image/ipq53xx.mk"
+    break
+  fi
+done
+if [ -n "$IMG_MK" ]; then
+  sed -i '/^define Device\/jdcloud_re-cs-06/,/^endef$/ s/Device\/FitImage)/Device\/FitImageLzma)/' "$IMG_MK"
+  echo "LZMA fix: jdcloud_re-cs-06 image recipe now:"
+  sed -n '/^define Device\/jdcloud_re-cs-06/,/^endef$/p' "$IMG_MK" | grep 'FitImage'
+else
+  echo "LZMA fix: ipq53xx.mk not found, skipped"
+fi
