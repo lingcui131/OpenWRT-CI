@@ -25,30 +25,36 @@ UPDATE_PACKAGE "luci-app-lucky" "gdy666/luci-app-lucky" "main"
 # 同时关掉这台 eMMC 机型用不上的大块功能，给 BTF 腾 7168k 内核分区空间
 # （本地 Kwrt 版实测口径：io_uring/ftrace/NAND·NOR·UBI 合计约省 1.3MB，honk 与全部插件不依赖它们）
 # ============================================================
-KCFG=""
-for cand in target/linux/qualcommbe/config-6.18 openwrt/target/linux/qualcommbe/config-6.18 /mnt/build_wrt/target/linux/qualcommbe/config-6.18; do
-  [ -f "$cand" ] && KCFG="$cand" && break
+KCFGS=""
+for root in "$PWD" /mnt/build_wrt; do
+  [ -d "$root/target/linux/qualcommbe" ] || continue
+  for f in $(find "$root/target/linux/qualcommbe" -name 'config-6.18' 2>/dev/null); do
+    case " $KCFGS " in *" $f "*) ;; *) KCFGS="$KCFGS $f" ;; esac
+  done
 done
-if [ -z "$KCFG" ]; then
-  KCFG=$(find /mnt "$PWD" -maxdepth 6 -path '*target/linux/qualcommbe/config-6.18' 2>/dev/null | head -n 1)
-fi
-if [ -n "$KCFG" ] && [ -f "$KCFG" ]; then
-  {
-    echo 'CONFIG_DEBUG_INFO=y'
-    echo 'CONFIG_DEBUG_INFO_BTF=y'
-    echo '# CONFIG_DEBUG_INFO_REDUCED is not set'
-    echo '# CONFIG_IO_URING is not set'
-    echo '# CONFIG_FTRACE is not set'
-    echo '# CONFIG_MTD_NAND_CORE is not set'
-    echo '# CONFIG_MTD_SPI_NOR is not set'
-    echo '# CONFIG_MTD_UBI is not set'
-    echo '# CONFIG_KALLSYMS is not set'
-    echo '# CONFIG_PERF_EVENTS is not set'
-    echo '# CONFIG_BPF_EVENTS is not set'
-    echo '# CONFIG_KEXEC is not set'
-    echo '# CONFIG_MAGIC_SYSRQ is not set'
-  } >> "$KCFG"
-  echo "BTF fix: patched kernel fragment $KCFG"
+if [ -n "$KCFGS" ]; then
+  for KCFG in $KCFGS; do
+    {
+      echo 'CONFIG_DEBUG_INFO=y'
+      echo 'CONFIG_DEBUG_INFO_BTF=y'
+      echo '# CONFIG_DEBUG_INFO_REDUCED is not set'
+      echo '# CONFIG_IO_URING is not set'
+      echo '# CONFIG_FTRACE is not set'
+      echo '# CONFIG_MTD_NAND_CORE is not set'
+      echo '# CONFIG_MTD_SPI_NOR is not set'
+      echo '# CONFIG_MTD_UBI is not set'
+      echo '# CONFIG_KALLSYMS is not set'
+      echo '# CONFIG_KALLSYMS_ALL is not set'
+      echo '# CONFIG_PERF_EVENTS is not set'
+      echo '# CONFIG_BPF_EVENTS is not set'
+      echo '# CONFIG_KEXEC is not set'
+      echo '# CONFIG_MAGIC_SYSRQ is not set'
+      echo '# CONFIG_IPV6 is not set'
+      echo '# CONFIG_BT is not set'
+      echo '# CONFIG_SND is not set'
+    } >> "$KCFG"
+    echo "BTF fix: patched kernel fragment $KCFG"
+  done
 else
   echo "BTF fix: kernel fragment config-6.18 not found, skipped"
 fi
