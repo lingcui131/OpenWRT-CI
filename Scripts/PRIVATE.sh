@@ -26,10 +26,13 @@ UPDATE_PACKAGE "luci-app-lucky" "gdy666/luci-app-lucky" "main"
 # （本地 Kwrt 版实测口径：io_uring/ftrace/NAND·NOR·UBI 合计约省 1.3MB，honk 与全部插件不依赖它们）
 # ============================================================
 KCFG=""
-for cand in target/linux/qualcommbe/config-6.18 openwrt/target/linux/qualcommbe/config-6.18; do
+for cand in target/linux/qualcommbe/config-6.18 openwrt/target/linux/qualcommbe/config-6.18 /mnt/build_wrt/target/linux/qualcommbe/config-6.18; do
   [ -f "$cand" ] && KCFG="$cand" && break
 done
-if [ -n "$KCFG" ]; then
+if [ -z "$KCFG" ]; then
+  KCFG=$(find /mnt "$PWD" -maxdepth 6 -path '*target/linux/qualcommbe/config-6.18' 2>/dev/null | head -n 1)
+fi
+if [ -n "$KCFG" ] && [ -f "$KCFG" ]; then
   {
     echo 'CONFIG_DEBUG_INFO=y'
     echo 'CONFIG_DEBUG_INFO_BTF=y'
@@ -39,6 +42,11 @@ if [ -n "$KCFG" ]; then
     echo '# CONFIG_MTD_NAND_CORE is not set'
     echo '# CONFIG_MTD_SPI_NOR is not set'
     echo '# CONFIG_MTD_UBI is not set'
+    echo '# CONFIG_KALLSYMS is not set'
+    echo '# CONFIG_PERF_EVENTS is not set'
+    echo '# CONFIG_BPF_EVENTS is not set'
+    echo '# CONFIG_KEXEC is not set'
+    echo '# CONFIG_MAGIC_SYSRQ is not set'
   } >> "$KCFG"
   echo "BTF fix: patched kernel fragment $KCFG"
 else
