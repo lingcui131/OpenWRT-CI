@@ -44,3 +44,16 @@ if [ -n "$KCFG" ]; then
 else
   echo "BTF fix: kernel fragment config-6.18 not found, skipped"
 fi
+
+# ============================================================
+# 2026-11-23 主题源：kucat 主题 + argon 配置插件（官方仓库拉取）
+# ============================================================
+UPDATE_PACKAGE "luci-theme-kucat" "sirpdboy/luci-theme-kucat" "master"
+UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master"
+
+# 默认主题设为 argon（files 覆盖层 uci-defaults，首次启动生效；之后可在 LuCI 里切 kucat 对比）
+if [ -d package ] && [ -d target ]; then
+  mkdir -p files/etc/uci-defaults
+  printf '%s\n' "uci set luci.main.mediaurlbase='/luci-static/argon'" "uci commit luci" "exit 0" > files/etc/uci-defaults/99-luci-theme
+  echo "theme: default set to argon via uci-defaults"
+fi
