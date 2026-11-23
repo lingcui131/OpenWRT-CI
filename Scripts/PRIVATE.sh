@@ -38,22 +38,19 @@ if [ -n "$KCFGS" ]; then
       echo 'CONFIG_DEBUG_INFO=y'
       echo 'CONFIG_DEBUG_INFO_BTF=y'
       echo '# CONFIG_DEBUG_INFO_REDUCED is not set'
-      echo '# CONFIG_IO_URING is not set'
-      echo '# CONFIG_FTRACE is not set'
+      echo '# CONFIG_MTD_NAND_QCOM is not set'
+      echo '# CONFIG_SPI_QPIC_SNAND is not set'
+      echo '# CONFIG_MTD_SPI_NAND is not set'
+      echo '# CONFIG_MTD_RAW_NAND is not set'
       echo '# CONFIG_MTD_NAND_CORE is not set'
       echo '# CONFIG_MTD_SPI_NOR is not set'
       echo '# CONFIG_MTD_UBI is not set'
-      echo '# CONFIG_KALLSYMS is not set'
-      echo '# CONFIG_KALLSYMS_ALL is not set'
-      echo '# CONFIG_PERF_EVENTS is not set'
-      echo '# CONFIG_BPF_EVENTS is not set'
-      echo '# CONFIG_KEXEC is not set'
-      echo '# CONFIG_MAGIC_SYSRQ is not set'
-      echo '# CONFIG_IPV6 is not set'
-      echo '# CONFIG_BT is not set'
-      echo '# CONFIG_SND is not set'
+      echo '# CONFIG_MTD_UBI_BLOCK is not set'
+      echo '# CONFIG_UBIFS_FS is not set'
+      echo '# CONFIG_DEBUG_FS is not set'
     } >> "$KCFG"
-    echo "BTF fix: patched kernel fragment $KCFG"
+    echo "BTF fix: patched kernel fragment $KCFG (verify: $(grep -c 'CONFIG_DEBUG_INFO_BTF=y' "$KCFG") BTF lines, tail:)"
+    tail -n 3 "$KCFG"
   done
 else
   echo "BTF fix: kernel fragment config-6.18 not found, skipped"
