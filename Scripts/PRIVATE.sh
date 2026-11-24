@@ -132,3 +132,22 @@ if [ -d package ] && [ -d target ]; then
     echo "HONK init fix: honk.init not found, skipped"
   fi
 fi
+
+# ============================================================
+# 2026-11-24 第七档：Honk 核心变体 -native-api（精简）→ -full（全功能）
+# 189160 包默认下 daeuniverse/honk 同 release 的 -native-api 变体
+# （features: ebpf,rprx,native-api,jemalloc —— 无 native-ui、无 clash-api），
+# 所以 ui: embedded 必然报错、config_write 不被识别。改下 -full 变体
+# （同为 jemalloc 系，含 native-ui + clash-api），embedded 面板、
+# config_write、password_auth 均可用。哈希取自上游 release 资产 digest，
+# 已用现 -native-api 的 aarch64 哈希交叉核对、同源一致。
+# ============================================================
+HONK_MK=$(find package -path '*/honk/Makefile' | head -n 1)
+if [ -n "$HONK_MK" ]; then
+  sed -i 's/^HONK_VARIANT:=.*/HONK_VARIANT:=-full/' "$HONK_MK"
+  sed -i 's/^HONK_HASH_AARCH64:=.*/HONK_HASH_AARCH64:=5e4c0359950e0f19fac53e31ef9ffbe9f0aafca92331c3fa81e5b56212950a6e/' "$HONK_MK"
+  sed -i 's/^HONK_HASH_X86_64:=.*/HONK_HASH_X86_64:=2783b8f0856fc1aecd1cd1d911d9a904c593cd507cf61e5fa24fbd7075317244/' "$HONK_MK"
+  echo "HONK variant fix: $(grep '^HONK_VARIANT' "$HONK_MK")"
+else
+  echo "HONK variant fix: honk/Makefile not found, skipped"
+fi
