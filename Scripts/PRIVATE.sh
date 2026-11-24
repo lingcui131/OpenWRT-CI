@@ -89,3 +89,46 @@ if [ -n "$IMG_MK" ]; then
 else
   echo "LZMA fix: ipq53xx.mk not found, skipped"
 fi
+
+# ============================================================
+# 2026-11-24 第六档：Honk 启动可靠性 + Doona 面板随固件内置 + geo 软链
+# 真机日志实证的三处缺陷：
+# 1) native_api.ui 指向的目录不存在时 honk-core 直接崩溃循环
+#    （failed to inspect native UI directory），新刷机没面板目录必中；
+#    且面板在线更新在国内网络拉不动 GitHub。把与 honk v0.1.0-beta.6
+#    配套的 doona v0.1.0-rc.6（程序+字体）预置进固件：开机即有面板，
+#    也不再因缺目录崩溃。CI 网络可直达 GitHub。
+# 2) v2ray-geoip/geosite 的 dat 装在 /usr/share/v2ray；再在
+#    /usr/share/honk 建软链兜底，两种查找路径都满足。
+# 3) honk.init 的 term_timeout 只有 8s：eBPF 卸载与连接排空经常超过
+#    8s，procd 会 SIGKILL 正在关闭的实例，残留的 datapath 锁让下一次
+#    启动长时间等待甚至失败（前台日志实测等待锁）。放宽到 60s。
+# ============================================================
+if [ -d package ] && [ -d target ]; then
+  DOONA_TAG="v0.1.0-rc.6"
+  DOONA_DIR="files/usr/share/honk/doona"
+  mkdir -p "$DOONA_DIR"
+  for f in "doona-0.1.0-rc.6.tar.gz" "doona-fonts-0.1.0-rc.6.tar.gz"; do
+    if curl -fsSL --retry 3 -o "/tmp/$f" "https://github.com/Zakkaus/doona/releases/download/$DOONA_TAG/$f"; then
+      tar -xzf "/tmp/$f" -C "$DOONA_DIR" && echo "DOONA fix: $f installed"
+    else
+      echo "DOONA fix: download $f FAILED"
+    fi
+  done
+  if [ -f "$DOONA_DIR/index.html" ]; then
+    printf '{"version":"0.1.0-rc.6","tag":"v0.1.0-rc.6","installed_at":"ci-build"}\n' > "$DOONA_DIR/.honk-panel.json"
+    echo "DOONA fix: panel ready at /usr/share/honk/doona"
+  else
+    echo "DOONA fix: index.html missing, panel NOT installed"
+  fi
+  ln -sf /usr/share/v2ray/geoip.dat files/usr/share/honk/geoip.dat
+  ln -sf /usr/share/v2ray/geosite.dat files/usr/share/honk/geosite.dat
+  echo "GEO fix: symlinks created in /usr/share/honk"
+  HONK_INIT=$(find package -path '*honk*' -name 'honk.init' | head -n 1)
+  if [ -n "$HONK_INIT" ]; then
+    sed -i 's/term_timeout 8/term_timeout 60/' "$HONK_INIT"
+    echo "HONK init fix: $(grep -o 'term_timeout [0-9]*' "$HONK_INIT" | head -n 1)"
+  else
+    echo "HONK init fix: honk.init not found, skipped"
+  fi
+fi
