@@ -113,3 +113,30 @@ if [ -d package ] && [ -d target ]; then
     echo "HONK init fix: honk.init not found, skipped"
   fi
 fi
+
+# ============================================================
+# 2026-11-24 第九档：用户点名补齐的插件源（均手动启动，见下方自启关闭）
+# - luci-app-ap-modem、luci-app-fastnet：原 kiddin9 源被 GitHub 封禁 451，
+#   改从 kenzok8/small-package 拉取；fastnet 另需本体 fastnet 与
+#   luci-lib-linkeaseauth、linkease-app-entry 两件套（同仓已核实存在）。
+# - luci-app-openvpn-plus：masmbit 独立仓库（OpenVPN 服务端/客户端全合一界面）。
+# - luci-app-adguardhome、luci-app-vlmcsd、luci-app-zerotier：
+#   immortalwrt 官方 luci feed 自带，只在 PRIVATE.txt 勾选、无需拉源。
+# ============================================================
+UPDATE_PACKAGE "luci-app-ap-modem" "kenzok8/small-package" "main" "" "luci-app-ap-modem"
+UPDATE_PACKAGE "luci-app-fastnet" "kenzok8/small-package" "main" "" "luci-app-fastnet fastnet luci-lib-linkeaseauth linkease-app-entry"
+UPDATE_PACKAGE "luci-app-openvpn-plus" "masmbit/luci-app-openvpn-plus" "main"
+
+# 手动启动组：lucky、OAF 行为管理与本档新增插件只装不安开机自启，
+# 首启时用 uci-defaults 逐个 disable（服务不存在就跳过），之后在 LuCI 里手动启停。
+if [ -d package ] && [ -d target ]; then
+  mkdir -p files/etc/uci-defaults
+  cat > files/etc/uci-defaults/99-manual-start <<'EOF'
+#!/bin/sh
+for svc in lucky oaf appfilter AdGuardHome ap-modem fastnet openvpn openvpn-plus vlmcsd zerotier; do
+  [ -x "/etc/init.d/$svc" ] && /etc/init.d/$svc disable
+done
+exit 0
+EOF
+  echo "manual-start: uci-defaults written (lucky/oaf/AdGuardHome/ap-modem/fastnet/openvpn/vlmcsd/zerotier boot-disabled)"
+fi
