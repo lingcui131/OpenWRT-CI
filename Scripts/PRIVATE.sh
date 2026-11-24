@@ -6,8 +6,9 @@
 # Nikki 不在此列：Packages.sh 已自带 UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
 # ============================================================
 
-# Honk：预编译打包（上游 honk-core release 资产、哈希校验），CI 免 zig 工具链
-UPDATE_PACKAGE "honk" "189160/luci-app-honk" "main"
+# Honk：2026-11-24 晚换源 kenzok8/openwrt-honk（自编核心 + 自带 Doona 面板，
+# 默认单文件 config.dae + secrets.dae 管理；原 189160 源见 git 历史）
+UPDATE_PACKAGE "honk" "kenzok8/openwrt-honk" "main"
 
 # oaf 应用过滤：官方 OpenAppFilter（写法照 Packages.sh 注释里的官方示例）
 UPDATE_PACKAGE "OpenAppFilter" "destan19/OpenAppFilter" "master" "" "open-app-filter luci-app-appfilter"
@@ -91,63 +92,24 @@ else
 fi
 
 # ============================================================
-# 2026-11-24 第六档：Honk 启动可靠性 + Doona 面板随固件内置 + geo 软链
-# 真机日志实证的三处缺陷：
-# 1) native_api.ui 指向的目录不存在时 honk-core 直接崩溃循环
-#    （failed to inspect native UI directory），新刷机没面板目录必中；
-#    且面板在线更新在国内网络拉不动 GitHub。把与 honk v0.1.0-beta.6
-#    配套的 doona v0.1.0-rc.6（程序+字体）预置进固件：开机即有面板，
-#    也不再因缺目录崩溃。CI 网络可直达 GitHub。
-# 2) v2ray-geoip/geosite 的 dat 装在 /usr/share/v2ray；再在
-#    /usr/share/honk 建软链兜底，两种查找路径都满足。
-# 3) honk.init 的 term_timeout 只有 8s：eBPF 卸载与连接排空经常超过
-#    8s，procd 会 SIGKILL 正在关闭的实例，残留的 datapath 锁让下一次
-#    启动长时间等待甚至失败（前台日志实测等待锁）。放宽到 60s。
+# 2026-11-24 第八档：Honk 换源 kenzok8/openwrt-honk 后的收口
+# 随换源一并撤销的旧档（均针对 189160 包的布局，对 kenzok8 不适用）：
+# - 第六档 Doona 预置进 files/usr/share/honk/doona：kenzok8 的
+#   luci-app-honk 自带 Doona 并装到 /usr/share/doona，不再需要 CI 下载内置；
+#   geo 软链同理撤销（kenzok8 的 honk.init 已设 DAE_LOCATION_ASSET=/usr/share/v2ray）。
+# - 第七档核心变体切换（HONK_VARIANT/-full 哈希）：kenzok8 的核心由其
+#   自家 CI 从上游同一提交自编（features: clash-api,ebpf,rprx,native-api，
+#   无 native-ui），Makefile 无 HONK_VARIANT 变量，无可切换。
+# 保留的只有 init 停机超时：eBPF 卸载与连接排空可达分钟级（真机实测
+# datapath 锁释放最长 240s），kenzok8 出厂 term_timeout 20s 仍偏短，
+# 放宽到 60s，sed 用通配数字、命中任何出厂值。
 # ============================================================
 if [ -d package ] && [ -d target ]; then
-  DOONA_TAG="v0.1.0-rc.6"
-  DOONA_DIR="files/usr/share/honk/doona"
-  mkdir -p "$DOONA_DIR"
-  for f in "doona-0.1.0-rc.6.tar.gz" "doona-fonts-0.1.0-rc.6.tar.gz"; do
-    if curl -fsSL --retry 3 -o "/tmp/$f" "https://github.com/Zakkaus/doona/releases/download/$DOONA_TAG/$f"; then
-      tar -xzf "/tmp/$f" -C "$DOONA_DIR" && echo "DOONA fix: $f installed"
-    else
-      echo "DOONA fix: download $f FAILED"
-    fi
-  done
-  if [ -f "$DOONA_DIR/index.html" ]; then
-    printf '{"version":"0.1.0-rc.6","tag":"v0.1.0-rc.6","installed_at":"ci-build"}\n' > "$DOONA_DIR/.honk-panel.json"
-    echo "DOONA fix: panel ready at /usr/share/honk/doona"
-  else
-    echo "DOONA fix: index.html missing, panel NOT installed"
-  fi
-  ln -sf /usr/share/v2ray/geoip.dat files/usr/share/honk/geoip.dat
-  ln -sf /usr/share/v2ray/geosite.dat files/usr/share/honk/geosite.dat
-  echo "GEO fix: symlinks created in /usr/share/honk"
   HONK_INIT=$(find package -path '*honk*' -name 'honk.init' | head -n 1)
   if [ -n "$HONK_INIT" ]; then
-    sed -i 's/term_timeout 8/term_timeout 60/' "$HONK_INIT"
+    sed -i 's/term_timeout [0-9][0-9]*/term_timeout 60/' "$HONK_INIT"
     echo "HONK init fix: $(grep -o 'term_timeout [0-9]*' "$HONK_INIT" | head -n 1)"
   else
     echo "HONK init fix: honk.init not found, skipped"
   fi
-fi
-
-# ============================================================
-# 2026-11-24 第七档：Honk 核心变体 -native-api（精简）→ -full（全功能）
-# 189160 包默认下 daeuniverse/honk 同 release 的 -native-api 变体
-# （features: ebpf,rprx,native-api,jemalloc —— 无 native-ui、无 clash-api），
-# 所以 ui: embedded 必然报错、config_write 不被识别。改下 -full 变体
-# （同为 jemalloc 系，含 native-ui + clash-api），embedded 面板、
-# config_write、password_auth 均可用。哈希取自上游 release 资产 digest，
-# 已用现 -native-api 的 aarch64 哈希交叉核对、同源一致。
-# ============================================================
-HONK_MK=$(find package -path '*/honk/Makefile' | head -n 1)
-if [ -n "$HONK_MK" ]; then
-  sed -i 's/^HONK_VARIANT:=.*/HONK_VARIANT:=-full/' "$HONK_MK"
-  sed -i 's/^HONK_HASH_AARCH64:=.*/HONK_HASH_AARCH64:=5e4c0359950e0f19fac53e31ef9ffbe9f0aafca92331c3fa81e5b56212950a6e/' "$HONK_MK"
-  sed -i 's/^HONK_HASH_X86_64:=.*/HONK_HASH_X86_64:=2783b8f0856fc1aecd1cd1d911d9a904c593cd507cf61e5fa24fbd7075317244/' "$HONK_MK"
-  echo "HONK variant fix: $(grep '^HONK_VARIANT' "$HONK_MK")"
-else
-  echo "HONK variant fix: honk/Makefile not found, skipped"
 fi
